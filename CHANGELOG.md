@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0 — not yet released
+## 1.1.0 — 30 October 2026
 
 - Two editions: the VolcaStudio XL Desktop App and the VolcaStudio XL Browser
   App. Packages are named `VolcaStudio-XL-Desktop-<version>-<platform>` and
