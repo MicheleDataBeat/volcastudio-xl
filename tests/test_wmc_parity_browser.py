@@ -429,13 +429,13 @@ class WmcParityBrowserTests(unittest.TestCase):
 
     def test_catalogue_current_snapshot_plan_save_rollback_diagnostics_and_narrow_layout(self):
         from volcastudio.grooves import apply_pattern, load_catalog
-        from volcastudio.patterns import Pattern, load_bank
+        from volcastudio.patterns import PATTERN_PROFILE, Pattern, load_bank
         original, fixture = self.open_pattern_fixture()
         fixture_before = fixture.read_bytes()
         self.go('movement')
         expect(self.page.locator('#catalog-steps tbody tr')).to_have_count(16)
         self.screenshot('grooves-normal.png')
-        catalog = load_catalog()
+        catalog = load_catalog(firmware=PATTERN_PROFILE)
         ident = 'DANGELO_SPANISH_JOINT_B03'
         template = catalog.resolve(ident)
         self.page.select_option('#catalog-category', 'dangelo')
@@ -481,7 +481,7 @@ class WmcParityBrowserTests(unittest.TestCase):
         self.page.click('#groove-save')
         expect(self.page.locator('#groove-send')).to_be_enabled(timeout=30000)
         expect(self.page.locator('#groove-status')).to_contain_text('memories 7')
-        expected = apply_pattern(Pattern(6, original[-1].data), {2: ident}, catalog)
+        expected = apply_pattern(Pattern(6, original[-1].data), {2: ident}, catalog, firmware=PATTERN_PROFILE)
         self.assertEqual(load_bank(self.paths['patterns'] / 'snapshot-groove.vspatterns'), [expected])
         self.assertEqual(load_bank(self.paths['patterns'] / 'snapshot-groove.rollback.vspatterns'), original)
         self.assertEqual(fixture.read_bytes(), fixture_before)
