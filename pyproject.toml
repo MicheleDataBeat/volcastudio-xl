@@ -1,0 +1,14 @@
+# Minimal metadata so that other local checkouts can depend on the shared backend.
+# Install the checkout in editable mode: Studio locates its build/ and data from it.
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "volcastudio"
+# PEP 440 form of volcastudio.__version__.
+version = "1.1.0"
+requires-python = ">=3.11"
+
+[tool.setuptools.packages.find]
+include = ["volcastudio*"]

@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>VolcaStudio XL Browser App</title>
+<meta name="description" content="VolcaStudio XL Browser App — Volca Sample workstation for Google Chrome">
+<link rel="icon" href="wmc-icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="wmc.css">
+<script src="wmc.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the workspace</a>
+<header class="masthead">
+  <div class="brand">
+    <span class="emblem" data-pixel="emblem" aria-hidden="true"></span>
+    <div>
+      <p class="kicker">VolcaStudio XL</p>
+      <h1>Browser App</h1>
+    </div>
+  </div>
+  <p class="motto" id="motto">Sample kits, pattern banks, grooves and firmware updates.</p>
+  <div class="masthead-tools">
+    <button type="button" class="chip" id="connection-chip" data-go="connections" title="Audio output for transfers">Output: not chosen</button>
+    <label class="switch" title="Animations and celebrations">
+      <input type="checkbox" id="motion-toggle"> <span>Motion</span>
+    </label>
+    <button type="button" class="quiet" id="help-button" data-go="guide">Guide</button>
+    <button type="button" class="quiet" id="close-button">Close Browser App</button>
+  </div>
+</header>
+
+<div class="notice" id="session-notice" hidden></div>
+
+<div class="frame">
+<nav class="spaces" aria-label="Spaces">
+  <button type="button" data-space="gathering" aria-current="page"><span class="num">01</span> Gathering <small>samples &amp; kit</small></button>
+  <button type="button" data-space="commons"><span class="num">02</span> Commons <small>saved kits</small></button>
+  <button type="button" data-space="memory"><span class="num">03</span> Memory <small>pattern banks</small></button>
+  <button type="button" data-space="movement"><span class="num">04</span> Movement <small>grooves</small></button>
+  <button type="button" data-space="firmware"><span class="num">05</span> Firmware <small>Korg updater</small></button>
+  <button type="button" data-space="connections"><span class="num">06</span> Connections <small>audio &amp; MIDI</small></button>
+  <button type="button" data-space="guide"><span class="num">?</span> Guide <small>how it works</small></button>
+</nav>
+
+<main id="main" tabindex="-1">
+
+<!-- 01 · GATHERING ------------------------------------------------------- -->
+<section class="space" id="space-gathering" data-title="Gathering">
+  <header class="space-head">
+    <h2>Gathering <span>· samples &amp; kit</span></h2>
+    <p>Choose samples, arrange their order and save a kit.</p>
+  </header>
+  <div class="gathering">
+    <section class="panel" aria-labelledby="libraries-title">
+      <div class="panel-head">
+        <h3 id="libraries-title">1 · Libraries</h3>
+        <div class="row">
+          <label class="file-button primary">Add samples…<input type="file" id="add-files" accept=".wav,.WAV,audio/wav,.json" multiple></label>
+          <label class="file-button">Add a folder…<input type="file" id="add-folder" webkitdirectory multiple></label>
+          <button type="button" id="library-manage">Manage libraries…</button>
+        </div>
+      </div>
+      <div class="row">
+        <label class="grow">Library
+          <select id="library-select" aria-label="Library"></select>
+        </label>
+        <button type="button" class="quiet small" id="library-remove" title="Remove the Browser App's copy of this library">Remove copy</button>
+        <button type="button" class="quiet small" id="library-refresh">Refresh</button>
+      </div>
+      <input type="search" id="library-search" placeholder="Filter by name or folder" aria-label="Filter samples">
+      <div class="row">
+        <button type="button" id="library-lower">Lower… <kbd>J</kbd></button>
+        <button type="button" id="library-raise">Raise… <kbd>K</kbd></button>
+        <button type="button" id="library-x2">Make ×2 variant</button>
+      </div>
+      <div class="list" id="library-list" role="listbox" aria-multiselectable="true" aria-label="Library samples" tabindex="0"></div>
+      <div class="row between">
+        <span class="hint" id="library-count">—</span>
+        <button type="button" class="primary" id="add-to-kit">Add to workbench <kbd>Enter</kbd></button>
+      </div>
+      <div class="row">
+        <button type="button" class="small" id="library-previous">Previous page</button>
+        <button type="button" class="small" id="library-next">Next page</button>
+      </div>
+      <p class="hint">Click, <kbd>Shift</kbd>/<kbd>Ctrl</kbd>/<kbd>⌘</kbd>-click or <kbd>Shift</kbd>+arrows to select several. <kbd>Space</kbd> listens.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="workbench-title">
+      <div class="panel-head">
+        <h3 id="workbench-title">2 · Workbench <span class="edit-badge" id="edit-badge" hidden></span></h3>
+        <div class="meter" id="budget" role="group" aria-label="Kit budget">
+          <div class="meter-line"><span id="budget-slots">00 / 100 slots</span><span id="budget-seconds">0.00 / 65.00 s</span></div>
+          <div class="bar" aria-hidden="true"><i id="budget-bar"></i></div>
+        </div>
+      </div>
+      <div class="list" id="workbench-list" role="listbox" aria-multiselectable="true" aria-label="Kit slots in order" tabindex="0"></div>
+      <div class="toolbar" role="toolbar" aria-label="Workbench tools">
+        <button type="button" data-act="up" title="Move up (Alt+↑)">↑</button>
+        <button type="button" data-act="down" title="Move down (Alt+↓)">↓</button>
+        <button type="button" data-act="remove" title="Remove from the workbench (Delete)">Remove</button>
+        <button type="button" data-act="lower">Lower… <kbd>J</kbd></button>
+        <button type="button" data-act="raise">Raise… <kbd>K</kbd></button>
+        <button type="button" data-act="x2">Make ×2 variant <kbd>Ctrl D</kbd></button>
+        <button type="button" data-act="align">Align keys…</button>
+        <button type="button" data-act="clear" class="quiet">Clear</button>
+      </div>
+      <div class="row">
+        <label>Listening source
+          <select id="preview-mode"><option value="source">Source audio</option><option value="volca" selected>Volca preview (mono, 31.25 kHz)</option></select>
+        </label>
+        <label>Listen at
+          <select id="preview-pitch" aria-label="Preview speed">
+            <option value="0">SPEED 0 (original)</option>
+            <option value="-12">SPEED −12</option>
+            <option value="-24">SPEED −24</option>
+          </select>
+        </label>
+        <button type="button" id="listen">Listen <kbd>Space</kbd></button>
+        <button type="button" class="quiet" id="stop-listen">Stop</button>
+        <label class="check"><input type="checkbox" id="autoplay"> Autoplay selection</label>
+      </div>
+      <h3>3 · Keep &amp; send</h3>
+      <div class="row">
+        <label class="grow">Kit name
+          <input type="text" id="kit-name" placeholder="e.g. dusty-breaks" autocomplete="off" spellcheck="false" maxlength="64">
+        </label>
+        <button type="button" class="primary" id="save-kit">Save as new kit <kbd>Ctrl S</kbd></button>
+        <button type="button" id="replace-kit" hidden>Replace saved kit</button>
+      </div>
+      <div class="row">
+        <button type="button" id="check-kit">Check signals offline</button>
+        <button type="button" id="export-kit-signals">Download SYRO files…</button>
+        <button type="button" class="send" id="send-kit">Send saved kit to Volca…</button>
+      </div>
+      <p class="hint" id="kit-status">Save first. Sending replaces all 100 sample slots and always asks again.</p>
+    </section>
+
+    <section class="panel detail" aria-labelledby="detail-title">
+      <h3 id="detail-title">Listening notes</h3>
+      <canvas id="waveform" width="640" height="96" aria-hidden="true"></canvas>
+      <dl id="sample-detail" class="facts"><dt>Sample</dt><dd>Select a sample to see its pitch estimate and duration.</dd></dl>
+    </section>
+  </div>
+</section>
+
+<!-- 02 · COMMONS --------------------------------------------------------- -->
+<section class="space" id="space-commons" data-title="Commons" hidden>
+  <header class="space-head">
+    <h2>Commons <span>· saved kits</span></h2>
+    <p>Open, edit, send or archive kits and existing packs.</p>
+  </header>
+  <div class="row">
+    <button type="button" id="kits-refresh">Refresh</button>
+    <label class="file-button">Import kit ZIP…<input type="file" id="kit-import" accept=".zip,application/zip"></label>
+  </div>
+  <div class="table-wrap"><table class="grid" id="kits-table">
+    <thead><tr><th scope="col">Kit</th><th scope="col">Slots</th><th scope="col">Seconds</th><th scope="col">Memory</th><th scope="col">Actions</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+  <h3>Archive</h3>
+  <p class="hint">Deleted kits and versions replaced by an edit. Restoring never overwrites an existing kit.</p>
+  <ul class="plain" id="trash-list"></ul>
+</section>
+
+<!-- 03 · MEMORY ---------------------------------------------------------- -->
+<section class="space" id="space-memory" data-title="Memory" hidden>
+  <header class="space-head">
+    <h2>Memory <span>· DataBeat OS pattern banks</span></h2>
+    <p>Inspect, back up and restore pattern memories, or create neutral patterns offline.</p>
+  </header>
+  <div class="row">
+    <label>Destination firmware
+      <select id="pattern-firmware" aria-label="Installed destination firmware">
+        <option value="lumon-xl-internal">DataBeat OS 1.0 pattern format</option>
+      </select>
+    </label>
+    <span class="hint">Choose the firmware on your Volca. Reset, restore and signal export use this format.</span>
+  </div>
+  <div class="columns">
+    <section class="panel">
+      <h3>Open a bank</h3>
+      <div class="row">
+        <label class="grow">Saved banks
+          <select id="bank-select" aria-label="Saved pattern banks"></select>
+        </label>
+        <button type="button" id="bank-open">Open</button>
+      </div>
+      <div class="row">
+        <label class="file-button">Open a file…<input type="file" id="bank-upload" accept=".vspatterns,.syx,.json,.bin"></label>
+        <button type="button" id="bank-download">Download copy</button>
+      </div>
+      <h3>Begin again</h3>
+      <div class="row">
+        <label class="grow">Memories
+          <input type="text" id="reset-slots" value="all" aria-describedby="slot-hint">
+        </label>
+        <button type="button" id="bank-reset">Create neutral patterns</button>
+      </div>
+      <p class="hint" id="slot-hint">Use all, 1,3,5 or 1-4. Neutral: notes and motion cleared, Predictability ALL, microtiming 0.</p>
+      <div class="row">
+        <label class="grow">Save loaded bank as
+          <input type="text" id="bank-name" placeholder="e.g. tuesday-patterns" spellcheck="false">
+        </label>
+        <button type="button" id="bank-save">Save copy</button>
+      </div>
+    </section>
+    <section class="panel">
+      <h3>Restore to the Volca</h3>
+      <div class="memories" id="restore-memories" role="group" aria-label="Pattern memories to restore"></div>
+      <div class="row">
+        <button type="button" class="small" id="restore-all">All compatible</button>
+        <button type="button" class="small" id="restore-none">None</button>
+      </div>
+      <label class="check"><input type="checkbox" id="reset-current"> Also reset the current edit buffer through MIDI (neutral banks only)</label>
+      <div class="row">
+        <button type="button" class="send" id="patterns-send">Restore selected memories…</button>
+        <button type="button" id="export-pattern-signals">Download selected SYRO files…</button>
+      </div>
+      <div class="row">
+        <label>Current snapshot to memory
+          <select id="current-destination" aria-label="Destination for the current snapshot">
+            <option value="">—</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+          </select>
+        </label>
+        <button type="button" class="send" id="current-send">Restore snapshot…</button>
+        <button type="button" id="export-current-signals">Download snapshot SYRO…</button>
+      </div>
+      <h3>Back up the Volca (audio + MIDI)</h3>
+      <p class="hint">Computer MIDI OUT → Volca MIDI IN. Volca headphone output → computer audio input. Choose both in Connections. Playback stops; keep controls untouched for about two minutes.</p>
+      <div class="row">
+        <label class="grow">Backup name
+          <input type="text" id="backup-name" placeholder="e.g. machine-2026-10-14" spellcheck="false">
+        </label>
+        <button type="button" class="send" id="backup-start">Capture backup</button>
+      </div>
+      <div class="row">
+        <label class="file-button">Decode a recording…<input type="file" id="decode-upload" accept=".wav,audio/wav"></label>
+      </div>
+      <p class="hint">Decoding reads an existing mono PCM16 recording of a DataBeat OS backup; it does not trigger one.</p>
+    </section>
+  </div>
+  <section class="panel">
+    <h3>Inspector <span class="hint" id="bank-label"></span></h3>
+    <div id="bank-view" class="bank-view"><p class="hint">No bank loaded. Reset + groove does not need one.</p></div>
+  </section>
+</section>
+
+<!-- 04 · MOVEMENT -------------------------------------------------------- -->
+<section class="space" id="space-movement" data-title="Movement" hidden>
+  <header class="space-head">
+    <h2>Movement <span>· grooves</span></h2>
+    <p>Apply timing templates per part. One microstep is 1/32 of a step; use SWING 0 as the reference.</p>
+  </header>
+  <div class="columns">
+    <section class="panel">
+      <h3>1 · Memories</h3>
+      <div class="row">
+        <label>Pattern source
+          <select id="groove-source"><option value="stored">Stored memories</option><option value="current">Current snapshot from the loaded bank</option></select>
+        </label>
+        <label id="groove-destination-row" hidden>Destination memory
+          <select id="groove-destination"><option value="">Choose…</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select>
+        </label>
+      </div>
+      <div class="memories" id="groove-memories" role="group" aria-label="Pattern memories for the groove"></div>
+      <div class="row">
+        <button type="button" class="small" id="groove-all">All 10 patterns</button>
+        <button type="button" class="small" id="groove-none">Clear selection</button>
+      </div>
+      <fieldset class="modes">
+        <legend>Mode</legend>
+        <label class="check"><input type="radio" name="groove-mode" value="preserve" checked> Preserve — change only microtiming in the loaded bank</label>
+        <label class="check"><input type="radio" name="groove-mode" value="reset"> Reset + groove — start from neutral patterns (no backup needed)</label>
+      </fieldset>
+      <p class="hint" id="groove-scope"></p>
+    </section>
+    <section class="panel">
+      <h3>2 · Parts</h3>
+      <p class="hint">The same assignments apply to every selected memory. Type to search 270 named templates.</p>
+      <datalist id="groove-options"></datalist>
+      <div id="groove-parts" class="parts"></div>
+    </section>
+  </div>
+  <section class="panel">
+    <h3>3 · Save, then 4 · send</h3>
+    <div class="row">
+      <label class="grow">New bank name
+        <input type="text" id="groove-name" placeholder="e.g. dilla-kicks" spellcheck="false">
+      </label>
+      <button type="button" class="primary" id="groove-save">Apply templates &amp; save bank</button>
+      <button type="button" id="groove-preview">Review change plan</button>
+      <button type="button" class="send" id="groove-send" disabled>Send saved groove bank to Volca…</button>
+    </div>
+    <p class="hint" id="groove-status">Save first. Nothing has been sent to the Volca.</p>
+  </section>
+  <section class="panel" aria-labelledby="catalog-title">
+    <h3 id="catalog-title">Groove catalogue</h3>
+    <div class="row">
+      <label>Category <select id="catalog-category"><option value="all">All</option><option value="mpc3000">MPC3000</option><option value="dilla">Dilla</option><option value="dangelo">D’Angelo</option><option value="analytic">Analytic</option></select></label>
+      <label class="grow">Search profiles and source names <input type="search" id="catalog-search"></label>
+    </div>
+    <label>Timing profile <select id="catalog-profile"></select></label>
+    <label>Source / instrument / bar <select id="catalog-alias"></select></label>
+    <p id="catalog-description" class="hint"></p>
+    <div class="table-wrap"><table class="grid" id="catalog-steps"><thead><tr><th>Step</th><th>Microsteps</th><th>Source</th></tr></thead><tbody></tbody></table></div>
+    <pre id="catalog-provenance" class="facts-pre"></pre>
+    <div class="row">
+      <label>Use for part <select id="catalog-part"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></label>
+      <button type="button" id="catalog-use">Use this template</button>
+    </div>
+  </section>
+</section>
+
+<!-- 05 · FIRMWARE -------------------------------------------------------- -->
+<section class="space" id="space-firmware" data-title="Firmware" hidden>
+  <header class="space-head">
+    <h2>Firmware <span>· DataBeat OS and Korg</span></h2>
+    <p>Add your Korg updater, inspect each image’s identity and follow the installation instructions before sending.</p>
+  </header>
+  <div class="columns">
+    <section class="panel">
+      <h3>Archive</h3>
+      <div class="list plain-list" id="firmware-list" role="listbox" aria-label="Firmware archive" tabindex="0"></div>
+      <pre class="facts-pre" id="firmware-detail">Select an archived image.</pre>
+      <div class="row">
+        <button type="button" id="firmware-refresh">Refresh</button>
+        <button type="button" class="send" id="firmware-send">Begin update…</button>
+      </div>
+    </section>
+    <section class="panel">
+      <h3>Add the Korg updater</h3>
+      <p class="hint" id="korg-hint">Download the official Korg volca sample 1.42 updater, then choose it here. The Browser App builds DataBeat OS from it on this computer and checks the result.</p>
+      <ol class="hint">
+        <li>Open the <a href="https://www.korg.com/us/support/download/software/0/370/1475/" target="_blank" rel="noopener noreferrer">Korg volca sample download page</a>.</li>
+        <li>Read Korg’s licence agreement and download <code>volcasample_updater_1_42.zip</code>.</li>
+        <li>Choose that zip unchanged (or the <code>volcasample_sys_0142.wav</code> inside it).</li>
+      </ol>
+      <label class="file-button">Choose the Korg 1.42 updater…<input type="file" id="korg-file" accept=".zip,.wav,application/zip,audio/wav"></label>
+      <p class="hint">The checked DataBeat OS build and the Korg updater appear in the archive.</p>
+    </section>
+  </div>
+</section>
+
+<!-- 06 · CONNECTIONS ----------------------------------------------------- -->
+<section class="space" id="space-connections" data-title="Connections" hidden>
+  <header class="space-head">
+    <h2>Connections <span>· audio &amp; MIDI</span></h2>
+    <p>Choose the audio and MIDI connections for transfers and backups.</p>
+  </header>
+  <div class="columns">
+    <section class="panel">
+      <h3>Choose devices</h3>
+      <label>Transfer output → Volca <strong>SYNC IN</strong>
+        <select id="device-output" aria-label="Audio output connected to SYNC IN"></select>
+      </label>
+      <label>Backup input ← Volca <strong>headphone</strong> output
+        <select id="device-input" aria-label="Audio input connected to the Volca headphones"></select>
+      </label>
+      <label>MIDI output → Volca <strong>MIDI IN</strong>
+        <select id="device-midi" aria-label="MIDI output connected to the Volca MIDI IN"></select>
+      </label>
+      <div class="row">
+        <button type="button" id="devices-refresh">Refresh devices</button>
+      </div>
+      <ul class="plain status-list" id="device-status"></ul>
+    </section>
+    <section class="panel">
+      <h3>Cables</h3>
+      <ol class="steps">
+        <li><strong>Samples, patterns, grooves, firmware:</strong> computer headphone/line output → Volca <strong>SYNC IN</strong> (3.5 mm cable). Disconnect speakers and headphones from that output.</li>
+        <li><strong>Backup only:</strong> Volca <strong>headphone</strong> output → computer line/mic input, and a MIDI interface from the computer → Volca <strong>MIDI IN</strong>.</li>
+        <li>Pause other audio and notifications. Turn off EQ, “enhancements” and spatial effects for the transfer output. Avoid clipping.</li>
+      </ol>
+      <p class="hint">Listening in the Browser App uses Chrome's normal sound output. Only transfers use the output chosen here.</p>
+      <p class="hint" id="linux-menu-row" hidden><button type="button" id="linux-menu">Add the Browser App to the applications menu</button></p>
+    </section>
+  </div>
+  <section class="panel">
+    <h3>Installation and storage</h3>
+    <button type="button" id="system-check">Check installation</button>
+    <pre id="system-report" class="facts-pre">Check the installed tools and Studio folders without opening audio or MIDI devices.</pre>
+  </section>
+</section>
+
+<!-- GUIDE --------------------------------------------------------------- -->
+<section class="space" id="space-guide" data-title="Guide" hidden>
+  <header class="space-head">
+    <h2>Guide <span>· the short version</span></h2>
+    <p>Choose your samples → prepare the kit → transfer. Everything else is optional.</p>
+  </header>
+  <div class="columns">
+    <section class="panel">
+      <ol class="steps">
+        <li><strong>Gathering:</strong> use “Add samples…” or “Add a folder…” to import copies, or “Manage libraries…” to register a folder in place. Choose “All samples” to search every library.</li>
+        <li>Select samples (Shift/Ctrl/⌘-click), press <kbd>Enter</kbd> to add them to the workbench. Reorder with ↑ ↓ or drag. Listen with <kbd>Space</kbd>.</li>
+        <li>Optional: <kbd>J</kbd>/<kbd>K</kbd> lower or raise by 0–99 semitones (pitch and duration together). “Make ×2 variant” adds a version one octave higher and half as long, keeping existing kit entries. “Align keys…” proposes shifts to match a reference sample’s pitch class.</li>
+        <li>Name the kit and “Save as new kit”. A kit holds up to 100 samples and about 65 seconds, measured on the final audio.</li>
+        <li><strong>Connections:</strong> choose the output wired to SYNC IN and disconnect speakers and headphones from it. Sending a kit clears all 100 sample slots. Choose “Send saved kit to Volca…”, review the summary and confirm when ready.</li>
+      </ol>
+      <p>For listening, choose <strong>Source audio</strong> or <strong>Volca preview</strong>. Both use Chrome’s sound output. <strong>Autoplay selection</strong> listens as you browse; turn it off before a transfer.</p>
+      <p><strong>Download SYRO files…</strong> keeps the prepared files as a ZIP without sending. These are data-audio signals; do not audition them. Memory also exports signals for selected pattern memories or a snapshot with an explicit destination.</p>
+    </section>
+    <section class="panel">
+      <h3>What the messages mean</h3>
+      <dl class="facts">
+        <dt>Saved</dt><dd>Written on this computer only.</dd>
+        <dt>Checked offline</dt><dd>Signals were encoded and verified, then discarded. Nothing was played.</dd>
+        <dt>Signals sent</dt><dd>The Browser App finished playing the signals. The SYNC IN connection carries no acknowledgement; check the result on the instrument.</dd>
+        <dt>Stopped while sending</dt><dd>Part of the data may have arrived. Check affected samples or pattern memories before resending. For interrupted firmware updates, consult the DataBeat OS manual and the firmware guide.</dd>
+      </dl>
+      <h3>Shortcuts</h3>
+      <dl class="facts keys">
+        <dt><kbd>Enter</kbd></dt><dd>Add selected library samples</dd>
+        <dt><kbd>Space</kbd></dt><dd>Listen / stop</dd>
+        <dt><kbd>J</kbd> <kbd>K</kbd></dt><dd>Lower / raise selected samples in either list</dd>
+        <dt><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>D</kbd></dt><dd>Add ×2 variants, keeping existing kit entries</dd>
+        <dt><kbd>Alt</kbd>+<kbd>↑</kbd><kbd>↓</kbd></dt><dd>Move selected slots</dd>
+        <dt><kbd>Delete</kbd></dt><dd>Remove from the workbench</dd>
+        <dt><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>A</kbd></dt><dd>Select all in a list</dd>
+        <dt><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd></dt><dd>Save as new kit</dd>
+        <dt><kbd>Esc</kbd></dt><dd>Close a dialog / cancel a question</dd>
+      </dl>
+      <p class="hint" id="storage-info"></p>
+    </section>
+  </div>
+</section>
+</main>
+</div>
+
+<footer class="minutes" aria-label="Minutes of this session">
+  <div class="operation" id="operation" hidden>
+    <div class="operation-text"><strong id="operation-title"></strong> <span id="operation-message"></span></div>
+    <div class="bar"><i id="operation-bar"></i></div>
+    <button type="button" id="operation-cancel">Cancel</button>
+  </div>
+  <details id="minutes">
+    <summary>Minutes <span id="minutes-last"></span></summary>
+    <ol id="minutes-list"></ol>
+  </details>
+</footer>
+
+<dialog id="dialog" aria-labelledby="dialog-title">
+  <form method="dialog" class="dialog-form">
+    <h2 id="dialog-title"></h2>
+    <div id="dialog-body"></div>
+    <div class="dialog-actions" id="dialog-actions"></div>
+  </form>
+</dialog>
+
+<dialog id="align-dialog" class="wide" aria-labelledby="align-title">
+  <div class="dialog-form">
+    <h2 id="align-title">Concord · key alignment</h2>
+    <p class="hint">Choose one master and any slaves. Automatic shifts match the master's pitch class with the nearest transposition (−6…+5), including earlier varispeed. Nothing changes until you accept.</p>
+    <div class="row">
+      <label class="grow">Master key <select id="align-master"></select></label>
+      <button type="button" class="small" id="align-all">All slaves</button>
+      <button type="button" class="small" id="align-none">No slaves</button>
+    </div>
+    <div class="table-wrap align-table"><table class="grid" id="align-table">
+      <thead><tr><th scope="col">Slave</th><th scope="col">Sample</th><th scope="col">Now</th><th scope="col">Filename</th><th scope="col">Measured</th><th scope="col">Pitch source</th><th scope="col">Shift</th><th scope="col">Result</th><th scope="col">Seconds</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div class="row">
+      <span>Selected rows</span>
+      <input type="number" id="align-batch" min="-99" max="99" value="0" aria-label="Semitones for selected rows">
+      <button type="button" class="small" id="align-batch-set">Set shift</button>
+      <button type="button" class="small" id="align-batch-auto">Use automatic</button>
+    </div>
+    <p class="summary" id="align-summary" role="status">Listening…</p>
+    <div class="dialog-actions">
+      <button type="button" id="align-cancel">Cancel</button>
+      <button type="button" class="primary" id="align-accept" disabled>Accept proposal</button>
+    </div>
+  </div>
+</dialog>
+
+<div class="celebration" id="celebration" role="status" aria-live="polite" hidden>
+  <span class="badge" data-pixel="spark" aria-hidden="true"></span>
+  <div><strong id="celebration-title"></strong><p id="celebration-text"></p></div>
+</div>
+<div class="sr-only" id="announcer" aria-live="polite"></div>
+</body>
+</html>

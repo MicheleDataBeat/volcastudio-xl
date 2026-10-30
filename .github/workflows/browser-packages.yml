@@ -1,0 +1,120 @@
+name: Browser App private packages
+
+# Builds and verifies the Browser App helper natively on each OS, on demand. Release
+# builds of every edition use release-packages.yml.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-packages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            ffmpeg: linux64
+            chrome: /usr/bin/google-chrome
+          - os: windows-2022
+            ffmpeg: win64
+            chrome: C:\Program Files\Google\Chrome\Application\chrome.exe
+          - os: macos-15
+            ffmpeg: brew
+            chrome: /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      WMC_TEST_CHROME: ${{ matrix.chrome }}
+      PYTHONUTF8: "1"
+    steps:
+      - name: Check out private source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Linux audio libraries
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -q && sudo apt-get install -y -q libportaudio2 libasound2-dev libjack-jackd2-dev
+
+      - name: Fetch FFmpeg (LGPL build, BtbN n9.0)
+        if: matrix.ffmpeg != 'brew'
+        run: |
+          name="ffmpeg-n9.0-latest-${{ matrix.ffmpeg }}-lgpl-9.0"
+          ext=tar.xz; [ "${{ matrix.ffmpeg }}" = win64 ] && ext=zip
+          curl -fsSL -o "ffmpeg.$ext" "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/$name.$ext"
+          if [ "$ext" = zip ]; then unzip -q ffmpeg.zip; else tar xf ffmpeg.tar.xz; fi
+          suffix=; [ "$ext" = zip ] && suffix=.exe
+          mkdir -p ffmpeg-licenses
+          cp "$name/LICENSE.txt" ffmpeg-licenses/FFmpeg-LICENSE.txt
+          "$name/bin/ffmpeg$suffix" -version | head -n 1 > ffmpeg-licenses/FFmpeg-VERSION.txt
+          printf 'FFmpeg LGPL build from https://github.com/BtbN/FFmpeg-Builds (%s). Source: https://ffmpeg.org/releases/ and the commit in FFmpeg-VERSION.txt.\n' "$name" > ffmpeg-licenses/FFmpeg-SOURCE.txt
+          bindir="$PWD/$name/bin"
+          if [ "$RUNNER_OS" = Windows ]; then bindir="$(cygpath -w "$bindir")"; sep='\'; else sep=/; fi
+          echo "$bindir" >> "$GITHUB_PATH"
+          echo "FFMPEG=$bindir${sep}ffmpeg$suffix" >> "$GITHUB_ENV"
+          echo "FFPROBE=$bindir${sep}ffprobe$suffix" >> "$GITHUB_ENV"
+
+      - name: Install FFmpeg (Homebrew)
+        if: matrix.ffmpeg == 'brew'
+        run: |
+          brew install ffmpeg
+          mkdir -p ffmpeg-licenses
+          ffmpeg -version | head -n 1 > ffmpeg-licenses/FFmpeg-VERSION.txt
+          cp "$(brew --prefix ffmpeg)/LICENSE.md" ffmpeg-licenses/ 2>/dev/null || true
+          echo "FFMPEG=$(command -v ffmpeg)" >> "$GITHUB_ENV"
+          echo "FFPROBE=$(command -v ffprobe)" >> "$GITHUB_ENV"
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install -r packaging/requirements-wmc.txt playwright
+          python -m pip freeze > pip-freeze.txt
+
+      - name: Build the SYRO converter
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then python tools/build_syro.py --compiler gcc; else python tools/build_syro.py; fi
+
+      - name: Source tests (helper, launcher, real Chrome end to end)
+        run: python -m unittest tests.test_wmc_service tests.test_wmc_browser -v
+
+      - name: Build the application
+        run: python tools/build_wmc.py --ffmpeg "$FFMPEG" --ffprobe "$FFPROBE" --licenses ffmpeg-licenses --archive | tee build-result.json
+
+      - name: Verify the packaged application offline
+        run: |
+          if [ "$RUNNER_OS" = macOS ]; then APP="build/wmc/dist/VolcaStudio XL Browser App.app/Contents/MacOS/VolcaStudio XL Browser App";
+          elif [ "$RUNNER_OS" = Windows ]; then APP="build/wmc/dist/VolcaStudio XL Browser App/VolcaStudio XL Browser App.exe";
+          else APP="build/wmc/dist/VolcaStudio XL Browser App/VolcaStudio XL Browser App"; fi
+          "$APP" --smoke-test
+          "$APP" --verify-offline build/wmc/offline-verification
+          cat build/wmc/offline-verification/report.json
+          WMC_PACKAGED_APP="$PWD/$APP" python -m unittest tests.test_wmc_browser.PackagedAppBrowserTests -v
+
+      - name: Retain private package and evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: VolcaStudio-XL-Browser-${{ runner.os }}-${{ runner.arch }}-${{ github.run_number }}
+          path: |
+            build/wmc/VolcaStudio-XL-Browser-*
+            build/wmc/offline-verification/report.json
+            build-result.json
+            pip-freeze.txt
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0

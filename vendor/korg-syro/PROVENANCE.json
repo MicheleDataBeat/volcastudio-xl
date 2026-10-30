@@ -1,0 +1,17 @@
+{
+  "upstream": "https://github.com/korginc/volcasample",
+  "revision": "b0ed615f18c230a18b378d9ddc6a936971597e4e",
+  "license": "BSD-3-Clause",
+  "modifications": [],
+  "files": {
+    "syro/korg_syro_comp.c": "8baba6e7c5bcfc38268728e4ad410cbcff77697b45b52c8e519fae33a141be5c",
+    "syro/korg_syro_comp.h": "2fdcd06f709deab222832e02da551e7f9e26ac403f671187f4b6f927b82855e3",
+    "syro/korg_syro_func.c": "0bde14aba66ff824515aca2d65c6a477a90b53213a8f21b67fec6df700f4fe68",
+    "syro/korg_syro_func.h": "fba29a58f6a9bb8efec25ae730aa04c4d381ec998607bede6363324735c5430c",
+    "syro/korg_syro_type.h": "c3524d6ff4d2b55cd80537629d8702624c8c4bbf70d502be2fdac8d13908dd88",
+    "syro/korg_syro_volcasample.c": "caadb1614f9b0cac5d5ad0d5928a15afbed7c70970ec8e55e23266edc70e9c13",
+    "syro/korg_syro_volcasample.h": "47c60be5c63e803e7fccd4224e3a0b6b7d5946066c7d56df5e7745814159b603",
+    "example/korg_syro_volcasample_example.c": "cc7f2e6235ca727882ae552b81968abc5889f2cc6a153b0f91897b6d294e0966",
+    "COPYING": "2e54bbecbf4661d74d11d5bbde622777459e2696b5b328783943fe348cbf8478"
+  }
+}

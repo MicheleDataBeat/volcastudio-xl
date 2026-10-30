@@ -1,0 +1,67 @@
+name: Desktop App macOS private test build
+
+# Explicitly started by a repository maintainer; no push/PR/release publication.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-macos-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apple-silicon:
+    runs-on: macos-15
+    timeout-minutes: 20
+    env:
+      QT_QPA_PLATFORM: offscreen
+      QT_QPA_PLATFORMTHEME: none
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_CLEANUP: "1"
+    steps:
+      - name: Check out private source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up native Python
+        id: python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          architecture: arm64
+
+      - name: Verify runner architecture and install build dependencies
+        run: |
+          test "$(uname -m)" = arm64
+          python -c 'import platform; assert platform.machine() == "arm64"'
+          brew install ffmpeg
+
+      - name: Build app and verify offline
+        env:
+          OUTIE_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: bash tools/build_outie_macos.command
+
+      - name: Retain private application ZIP
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: VolcaStudio-XL-Desktop-macOS-arm64-${{ github.run_number }}
+          path: dist/VolcaStudio-XL-Desktop-macOS-arm64-local.zip
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+      - name: Retain build and verification evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: VolcaStudio-XL-Desktop-macOS-arm64-evidence-${{ github.run_number }}
+          path: |
+            build/macos/build.log
+            build/macos/environment.txt
+            build/macos/python-requirements.txt
+            build/macos/offline-verification-*/
+          if-no-files-found: warn
+          retention-days: 7

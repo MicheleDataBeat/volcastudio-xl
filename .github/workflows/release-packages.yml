@@ -1,0 +1,181 @@
+name: Release packages
+
+# Builds and verifies every edition natively for a public release:
+# Browser App and Desktop App on Windows, macOS and Linux.
+# Publishing the artifacts as a release is a separate, explicit step.
+on:
+  workflow_dispatch:
+  push:
+    branches: ['release/**', 'claude/**']
+    paths:
+      - 'volcastudio/__init__.py'
+      - 'volcastudio/wmc/__init__.py'
+      - '.github/workflows/release-packages.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-packages-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HOMEBREW_NO_AUTO_UPDATE: "1"
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+  PYTHONUTF8: "1"
+  # The official Korg updater is fetched from Korg for verification only. It is
+  # kept in RUNNER_TEMP, outside the checkout, and is never packaged or uploaded.
+  KORG_UPDATER_URL: "https://cdn.korg.com/us/support/download/files/ca56338c3f72b12c85506fae1aacfd9e.zip?response-content-disposition=attachment%3Bfilename%2A%3DUTF-8%27%27volcasample_updater_1_42.zip&response-content-type=application%2Foctet-stream%3B"
+  KORG_UPDATER_SHA256: "f0df310b8bd43b6367dbd0c54ba75e3db53942087e1a4b1ae049f8f08e1731f3"
+
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        edition: [browser, desktop]
+        os: [ubuntu-22.04, windows-2022, macos-15]
+        include:
+          - edition: browser
+            requirements: packaging/requirements-wmc.txt
+            app: VolcaStudio XL Browser App
+          - edition: desktop
+            requirements: packaging/requirements-outie.txt
+            app: VolcaStudio XL Desktop App
+          - os: ubuntu-22.04
+            ffmpeg: linux64
+            chrome: /usr/bin/google-chrome
+          - os: windows-2022
+            ffmpeg: win64
+            chrome: C:\Program Files\Google\Chrome\Application\chrome.exe
+          - os: macos-15
+            ffmpeg: brew
+            chrome: /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 50
+    defaults:
+      run:
+        shell: bash
+    env:
+      WMC_TEST_CHROME: ${{ matrix.chrome }}
+      QT_QPA_PLATFORM: offscreen
+      QT_QPA_PLATFORMTHEME: none
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Fetch the official Korg updater for verification (never packaged)
+        run: |
+          mkdir -p "$RUNNER_TEMP/korg"
+          KORG="$RUNNER_TEMP/korg/volcasample_updater_1_42.zip"
+          curl -fsSL --retry 3 -o "$KORG" "$KORG_UPDATER_URL"
+          python -c "import hashlib,sys; d=hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest(); print(d); sys.exit(d != sys.argv[2])" "$KORG" "$KORG_UPDATER_SHA256"
+          echo "VOLCASTUDIO_KORG_UPDATER=$KORG" >> "$GITHUB_ENV"
+
+      - name: Install Linux audio and Qt runtime libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q libportaudio2 libasound2-dev libjack-jackd2-dev \
+            libegl1 libgl1 libxkbcommon0 libxkbcommon-x11-0 libfontconfig1 libdbus-1-3
+
+      - name: Fetch FFmpeg (LGPL build, BtbN n9.0)
+        if: matrix.ffmpeg != 'brew'
+        run: |
+          name="ffmpeg-n9.0-latest-${{ matrix.ffmpeg }}-lgpl-9.0"
+          ext=tar.xz; [ "${{ matrix.ffmpeg }}" = win64 ] && ext=zip
+          curl -fsSL -o "ffmpeg.$ext" "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/$name.$ext"
+          if [ "$ext" = zip ]; then unzip -q ffmpeg.zip; else tar xf ffmpeg.tar.xz; fi
+          suffix=; [ "$ext" = zip ] && suffix=.exe
+          mkdir -p ffmpeg-licenses
+          cp "$name/LICENSE.txt" ffmpeg-licenses/FFmpeg-LICENSE.txt
+          "$name/bin/ffmpeg$suffix" -version | head -n 1 > ffmpeg-licenses/FFmpeg-VERSION.txt
+          printf 'FFmpeg LGPL build from https://github.com/BtbN/FFmpeg-Builds (%s). Source: https://ffmpeg.org/releases/ and the commit in FFmpeg-VERSION.txt.\n' "$name" > ffmpeg-licenses/FFmpeg-SOURCE.txt
+          bindir="$PWD/$name/bin"
+          if [ "$RUNNER_OS" = Windows ]; then bindir="$(cygpath -w "$bindir")"; sep='\'; else sep=/; fi
+          echo "$bindir" >> "$GITHUB_PATH"
+          echo "FFMPEG=$bindir${sep}ffmpeg$suffix" >> "$GITHUB_ENV"
+          echo "FFPROBE=$bindir${sep}ffprobe$suffix" >> "$GITHUB_ENV"
+
+      - name: Install FFmpeg (Homebrew)
+        if: matrix.ffmpeg == 'brew'
+        run: |
+          brew install ffmpeg
+          mkdir -p ffmpeg-licenses
+          ffmpeg -version | head -n 1 > ffmpeg-licenses/FFmpeg-VERSION.txt
+          cp "$(brew --prefix ffmpeg)/LICENSE.md" ffmpeg-licenses/ 2>/dev/null || true
+          printf 'FFmpeg from Homebrew (%s). Source: https://ffmpeg.org/releases/\n' "$(brew list --versions ffmpeg)" > ffmpeg-licenses/FFmpeg-SOURCE.txt
+          echo "FFMPEG=$(command -v ffmpeg)" >> "$GITHUB_ENV"
+          echo "FFPROBE=$(command -v ffprobe)" >> "$GITHUB_ENV"
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install -r "${{ matrix.requirements }}" playwright
+          python -m pip freeze > pip-freeze.txt
+
+      - name: Build the SYRO converter
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then python tools/build_syro.py --compiler gcc; else python tools/build_syro.py; fi
+
+      - name: Source tests
+        run: |
+          python -m unittest tests.test_firmware tests.test_lumon_build tests.test_grooves -v
+          if [ "${{ matrix.edition }}" = browser ]; then
+            python -m unittest tests.test_wmc_service tests.test_wmc_browser tests.test_release_site tests.test_wmc_library_actions tests.test_wmc_groove_actions tests.test_wmc_parity tests.test_wmc_parity_browser -v
+          else
+            python -m unittest tests.test_outie_gui tests.test_outie_model tests.test_outie_packaging tests.test_outie_state tests.test_outie_library tests.test_outie_kit_archive tests.test_outie_pattern_actions -v
+          fi
+
+      - name: Build Browser App
+        if: matrix.edition == 'browser'
+        run: python tools/build_wmc.py --ffmpeg "$FFMPEG" --ffprobe "$FFPROBE" --licenses ffmpeg-licenses --archive --output-root build/release | tee build-result.json
+
+      - name: Build Desktop App
+        if: matrix.edition == 'desktop'
+        run: python tools/build_outie.py --ffmpeg "$FFMPEG" --ffprobe "$FFPROBE" --licenses ffmpeg-licenses --archive --output-root build/release | tee build-result.json
+
+      - name: Verify the packaged application offline
+        run: |
+          NAME="${{ matrix.app }}"
+          if [ "$RUNNER_OS" = macOS ]; then APP="build/release/dist/$NAME.app/Contents/MacOS/$NAME";
+          elif [ "$RUNNER_OS" = Windows ]; then APP="build/release/dist/$NAME/$NAME.exe";
+          else APP="build/release/dist/$NAME/$NAME"; fi
+          "$APP" --smoke-test
+          "$APP" --verify-offline build/release/offline-verification
+          python -c "import json,sys; r=json.load(open('build/release/offline-verification/report.json')); print(json.dumps(r, indent=1)[:4000]); sys.exit(0 if r['passed'] else 1)"
+          python tools/check_firmware_report.py build/release/offline-verification/report.json
+          if [ "${{ matrix.edition }}" = browser ]; then
+            WMC_PACKAGED_APP="$PWD/$APP" python -m unittest tests.test_wmc_browser.PackagedAppBrowserTests tests.test_wmc_parity_browser -v
+          fi
+
+      - name: Check the package contains no Korg firmware
+        run: |
+          shopt -s nullglob
+          packages=(build/release/VolcaStudio-XL-*.zip build/release/VolcaStudio-XL-*.tar.gz)
+          test "${#packages[@]}" -ge 1
+          python tools/check_distribution.py --korg-updater "$VOLCASTUDIO_KORG_UPDATER" --require-patch \
+            "${packages[@]}" > build/release/distribution-check.json || true
+          cat build/release/distribution-check.json
+          python -c "import json,sys; sys.exit(0 if json.load(open('build/release/distribution-check.json'))['passed'] else 1)"
+
+      - name: Retain package and evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-${{ matrix.edition }}-${{ runner.os }}-${{ runner.arch }}
+          path: |
+            build/release/VolcaStudio-XL-*
+            build/release/offline-verification/report.json
+            build/release/distribution-check.json
+            build-result.json
+            pip-freeze.txt
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0

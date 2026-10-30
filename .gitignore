@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.env/
+.venv/
+*.egg-info/
+*.wav
+*.rfl
+*.RPP
+*.reason
+*.reasonfree
+build/
+dist/
+*.spec
